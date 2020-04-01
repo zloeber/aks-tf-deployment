@@ -1,50 +1,60 @@
-## Example of deploying a cluster with some secrets stored in keyvault.
+## Example of deploying a cluster
 
 provider azurerm {
   features {}
 }
 
-data azurerm_key_vault secretstore {
-  name                = "myvaultname"
-  resource_group_name = "vault_resource_group"
+provider azuread {}
+
+resource azurerm_resource_group aks {
+  name     = "myaksdeployment"
+  location = "useast2"
+  tags = {
+    ORG = "MyOrg"
+  }
 }
-data azurerm_key_vault_secret app_id {
-  name         = "SPNAPPID"
-  key_vault_id = data.azurerm_key_vault.secretstore.id
+
+resource azurerm_virtual_network aks_vnet {
+  name                = "aks_vnet"
+  resource_group_name = azurerm_resource_group.aks.name
+  location            = azurerm_resource_group.aks.location
+  address_space       = ["10.0.0.0/8"]
 }
-data azurerm_key_vault_secret app_id_secret {
-  name         = "SPNSECRET"
-  key_vault_id = data.azurerm_key_vault.secretstore.id
+
+module aks_spn {
+  source = "../modules/tf_spn"
+  name   = "myaksspn"
 }
-data azurerm_key_vault_secret storage_account {
-  name         = "STORAGEACCOUNTNAME"
-  key_vault_id = data.azurerm_key_vault.secretstore.id
+
+module aks_roles {
+  source = "../modules/tf_roles"
 }
-data azurerm_key_vault_secret storage_account_key {
-  name         = "STORAGEACCOUNTKEY"
-  key_vault_id = data.azurerm_key_vault.secretstore.id
+
+module aks_role_assignment {
+  source         = "../modules/tf_role_assignments"
+  id             = module.aks_spn.id
+  resource_group = azurerm_resource_group.aks.name
 }
 
 module mycluster {
-  source                 = "git::ssh://git@github.com/zloeber/aks_tf_deployment"
-  cluster_index          = 1
-  cluster_name           = "akscluster1"
-  vm_size                = "Standard_D8s_v3"
-  resource_group         = "deployment_resource_group"
-  vnet_name              = "my_precreated_vnet"
-  subnet_prefix          = "10.10."
-  node_count             = 1
-  min_nodes              = 1
-  max_nodes              = 3
-  app_id                 = data.azurerm_key_vault_secret.app_id.value
-  app_id_secret          = data.azurerm_key_vault_secret.app_id_secret.value
-  namespace              = "app-namespace" # your deployment namespace
-  container_registry     = "someregistry.azurecr.io" # Your container registry
-  image                  = "someimage" # Your image
-  image_tag              = "latest" # should NOT be latest (latest is the devil)
-  storage_account        = data.azurerm_key_vault_secret.storage_account.value
-  storage_account_key    = data.azurerm_key_vault_secret.storage_account_key.value
+  source             = "../modules/tf_aks_deployment"
+  cluster_index      = 1
+  cluster_name       = "akscluster1"
+  vm_size            = "Standard_D8s_v3"
+  resource_group     = azurerm_resource_group.aks.name
+  vnet_name          = azurerm_virtual_network.aks_vnet.name
+  subnet_prefix      = "10.10."
+  node_count         = 1
+  min_nodes          = 1
+  max_nodes          = 3
+  app_id             = module.aks_spn.app_id
+  app_id_secret      = module.aks_spn.secret
+  namespace          = "app-namespace"           # your deployment namespace
+  container_registry = "someregistry.azurecr.io" # Your container registry
+  image              = "someimage"               # Your image
+  image_tag          = "latest"                  # should NOT be latest (latest is the devil)
+
   tags = {
-    ORG     = "MyOrg"
+    ORG = "MyOrg"
   }
 }

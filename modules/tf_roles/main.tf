@@ -2,10 +2,6 @@
     All the roles required for an spn to have rights to create a managed aks cluster in a subscription.
 */
 
-provider azurerm {
-  features {}
-}
-
 data azurerm_client_config current {}
 
 data azurerm_subscription current {

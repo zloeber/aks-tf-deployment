@@ -1,17 +1,10 @@
 /*
-  Azure SPN creation
-  - Insecure (stores clear text output in tf state)
+  Create an Azure SPN/Secret and store in state. 
+  - requires providers: azurerm, azuread
 */
 
-## Current azure provider
-provider azurerm {
-  features {}
-}
-
-provider azuread {}
-
 variable name {
-  description = "Service Principal name"
+  description = "Service Principal name to create"
   type        = string
 }
 

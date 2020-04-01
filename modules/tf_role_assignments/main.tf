@@ -5,10 +5,6 @@ variable resource_group {
   description = "resource group to scope role access"
 }
 
-provider azurerm {
-  features {}
-}
-
 /* Provide spn access to create clusters in a resource group */
 data azurerm_resource_group managed {
   name = var.resource_group
