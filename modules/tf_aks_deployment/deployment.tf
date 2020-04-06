@@ -37,6 +37,8 @@ resource kubernetes_config_map settings {
   }
 }
 
+
+
 resource kubernetes_deployment app {
   metadata {
     name      = var.kubernetes_app_name
@@ -65,11 +67,13 @@ resource kubernetes_deployment app {
           name    = var.kubernetes_app_name
           image   = "${var.container_registry}/${var.image}:${var.image_tag}"
           command = var.container_command
+          // This is a configmap to envvar setup
           env_from {
             config_map_ref {
               name = kubernetes_config_map.settings.metadata.0.name
             }
           }
+          // And a secret to envvar setup
           env {
             name = "AZURE_CLIENT_SECRET"
             value_from {
